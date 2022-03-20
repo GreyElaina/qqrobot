@@ -12,10 +12,7 @@ class Parsetext:
     
     def command(self):
         try:
-            if self._command[0] == '/':
-                return self._command[1:]
-            else:
-                return None
+            return self._command[1:] if self._command[0] == '/' else None
         except Exception:
             return None
     

@@ -17,10 +17,7 @@ sys.path.append(os.path.join(qqrobot.settings.BASE_DIR,util.PYTHON_SCRIPT_DIR))
 
 class BaseFilter:
     def filter(self,text,L):
-        if text in L:
-            return True
-        else:
-            return False
+        return text in L
             
 class Import_py(BaseEventMiddleware,BaseFilter):
     def process_request(self,content):
@@ -93,13 +90,7 @@ class Bind(BaseEventMiddleware,BaseFilter):
 
     def _checkScriptExists(self,fileName):
         scripts = self._script(fileName)
-        if len(scripts) == 0:
-            return False
-        else:
-            if util.fileExists(scripts[0].path):
-                return True
-            else:
-                return False
+        return bool(len(scripts) != 0 and util.fileExists(scripts[0].path))
     
     def __str__(self):
         return 'bind'
@@ -120,10 +111,9 @@ class Disable(BaseEventMiddleware,BaseFilter):
         commands = script.models.Command.objects.filter(external_name=external)
         if len(commands) == 0:
             return False
-        else:
-            commands[0].is_ban = True
-            commands[0].save()
-            return True
+        commands[0].is_ban = True
+        commands[0].save()
+        return True
 
     def __str__(self):
         return 'disable'
@@ -145,10 +135,9 @@ class Enable(BaseEventMiddleware,BaseFilter):
         commands = script.models.Command.objects.filter(external_name=external)
         if len(commands) == 0:
             return False
-        else:
-            commands[0].is_ban = False
-            commands[0].save()
-            return True
+        commands[0].is_ban = False
+        commands[0].save()
+        return True
 
     def __str__(self):
         return 'enable'
@@ -181,16 +170,13 @@ class List(BaseEventMiddleware):
         return L1
 
     def _thirdMiddleware(self):
-        L = []
         moduleName = []
         objects = event.models.Message.objects.all()
-        for i in objects:
-            L.append(i.script.path)
+        L = [i.script.path for i in objects]
         L = util.filterFileExtension(L, '.py')
         for file in L:
             obj = importlib.import_module(file)
-            result = obj.__str__()
-            if result:
+            if result := obj.__str__():
                 moduleName.append(result)
         return moduleName
 
@@ -204,8 +190,7 @@ class List(BaseEventMiddleware):
             mod = importlib.import_module(m[0])
             cls = getattr(mod, m[1])
             obj = cls(lambda x : 1)
-            result = obj.__str__()
-            if result:
+            if result := obj.__str__():
                 L.append(result)
         return L
 
@@ -226,8 +211,7 @@ class Print(BaseEventMiddleware,BaseFilter):
                 return response.jsonResponse({'reply':'命令不能为空'})
             elif self.filter(obj.args()[0],BLACK_LIST):
                 return response.jsonResponse({'reply':'输出失败,该名字为保留关键字'})
-            result = self._print(obj.args()[0])
-            if result:
+            if result := self._print(obj.args()[0]):
                 return response.privateResponse(content,result)
             else:
                 return response.jsonResponse({'reply': '输出失败,未找到该文件'})
@@ -236,13 +220,13 @@ class Print(BaseEventMiddleware,BaseFilter):
         commands = script.models.Command.objects.filter(external_name=external,is_ban=False)
         if len(commands) == 0:
             return False
-        else:
-            # path = commands[0].inside_name.path
-            name = commands[0].inside_name.name
-            if util.checkPythonFileExists(name+'.py'):
-                return util.readPythonScriptFile(name+'.py')
-            else:
-                return False
+        # path = commands[0].inside_name.path
+        name = commands[0].inside_name.name
+        return (
+            util.readPythonScriptFile(f'{name}.py')
+            if util.checkPythonFileExists(f'{name}.py')
+            else False
+        )
 
     def __str__(self):
         return 'print'
@@ -253,11 +237,10 @@ class Eval(BaseEventMiddleware,BaseFilter):
         if obj.command() == self.__str__() and content['message_type'] == 'group':
             if len(obj.args()) == 0:
                 return response.jsonResponse({'reply':'命令不能为空'})
-            else:
-                try:
-                    return response.jsonResponse({'reply':str(eval(obj.args()[0]))})
-                except Exception:
-                    return response.jsonResponse({'reply':'错误语法'})
+            try:
+                return response.jsonResponse({'reply':str(eval(obj.args()[0]))})
+            except Exception:
+                return response.jsonResponse({'reply':'错误语法'})
 
     def __str__(self):
         return 'eval'
@@ -266,8 +249,7 @@ class RunScript(BaseEventMiddleware):
     def process_request(self,content):
         obj = Parsetext(content['message'])
         if content['message_type'] == 'group':
-            path = self._commandExists(obj.command())
-            if path:
+            if path := self._commandExists(obj.command()):
                 path = util.filterFileExtension([path],'.py')[0]
                 # process = Process(target=self._runScript,args=(path,content,' '.join(obj.args())))
                 # process.start()
@@ -279,10 +261,7 @@ class RunScript(BaseEventMiddleware):
 
     def _commandExists(self,external):
         cmds =script.models.Command.objects.filter(external_name=external,is_ban=False)
-        if len(cmds) == 0:
-            return None
-        else:
-            return cmds[0].inside_name.path
+        return None if len(cmds) == 0 else cmds[0].inside_name.path
 
 class Ping(BaseEventMiddleware):
     def process_request(self,content):
@@ -308,34 +287,28 @@ class Help(BaseEventMiddleware):
             if len(obj.args()) == 0:
                 return response.jsonResponse(self._display(1))
             elif obj.args()[0] == 'add':
-                if len(obj.args()) >= 3:
-                    self._save(obj.args()[1],' '.join(obj.args()[2:]))
-                    return response.jsonResponse({'reply': '添加成功'})
-                else:
+                if len(obj.args()) < 3:
                     return response.jsonResponse({'reply':'错误参数!\n示例: /help add command xxxx xxx'})
+                self._save(obj.args()[1],' '.join(obj.args()[2:]))
+                return response.jsonResponse({'reply': '添加成功'})
             elif obj.args()[0] == 'del':
-                if len(obj.args()) == 2:
-                    if self._del(obj.args()[1]):
-                        return response.jsonResponse({'reply': '删除成功'})
-                    else:
-                        return response.jsonResponse({'reply': '未找到该帮助'})
-                else:
+                if len(obj.args()) != 2:
                     return response.jsonResponse({'reply': '错误参数!\n示例: /help del command'})
+                if self._del(obj.args()[1]):
+                    return response.jsonResponse({'reply': '删除成功'})
+                else:
+                    return response.jsonResponse({'reply': '未找到该帮助'})
             elif obj.args()[0].isdigit():
                 return response.jsonResponse(self._display(obj.args()[0]))
             elif len(obj.args()) == 1:
-                result =self._query(obj.args()[0])
-                if result:
+                if result := self._query(obj.args()[0]):
                     return response.jsonResponse({'reply': result})
                 else:
                     return response.jsonResponse({'reply': '没有找到该帮助'})
 
     def _query(self,command):
         helps =script.models.Help.objects.filter(command=command)
-        if len(helps) == 0:
-            return None
-        else:
-            return helps[0].explain
+        return None if len(helps) == 0 else helps[0].explain
     def _display(self,page):
         page = int(page)
         return {
@@ -360,9 +333,8 @@ class Help(BaseEventMiddleware):
         helps = models.Help.objects.filter(command=command)
         if len(helps) == 0:
             return False
-        else:
-            helps[0].delete()
-            return True
+        helps[0].delete()
+        return True
 
     def __str__(self):
         return 'help'
@@ -374,15 +346,14 @@ class Debug(BaseEventMiddleware):
         if obj.command() == self.__str__() and content['message_type'] == 'group':
             if len(obj.args()) == 0:
                 self.mode = self._debug()
+            elif obj.args()[0] == 'true':
+                self.mode = self._debug(True)
+            elif obj.args()[0] == 'false':
+                self.mode = self._debug(False)
+            elif obj.args()[0] == 'meta':
+                self.mode = 'meta'
             else:
-                if obj.args()[0] == 'true':
-                    self.mode = self._debug(True)
-                elif obj.args()[0] == 'false':
-                    self.mode = self._debug(False)
-                elif obj.args()[0] == 'meta':
-                    self.mode = 'meta'
-                else:
-                    self.mode = self._debug()
+                self.mode = self._debug()
             global DEBUG
             DEBUG['mode'] = self.mode
             DEBUG['user_id'] = content['user_id']
@@ -397,12 +368,10 @@ class Debug(BaseEventMiddleware):
             response.privateResponse(content,json.dumps(original))
 
     def _debug(self,swich=None):
-        if swich == None:
-            return False if DEBUG['mode'] else True
+        if swich is None:
+            return not DEBUG['mode']
         elif swich == True:
             return True
-        elif swich == False:
-            return False
         else:
             return False
 
@@ -425,18 +394,17 @@ class Register(BaseEventMiddleware):
                 scripts = script.models.PythonScript.objects.filter(name=obj.args()[1])
                 if len(scripts) == 0:
                     return response.jsonResponse({'reply':'文件不存在'})
+                if obj.args()[0] == MESSAGE_TYPE['MESSAGE']:
+                    self._register(event.models.Message,scripts[0],content['user_id'])
+                elif obj.args()[0] == MESSAGE_TYPE['NOTICE']:
+                    self._register(event.models.Notice, scripts[0], content['user_id'])
+                elif obj.args()[0] == MESSAGE_TYPE['REQUEST']:
+                    self._register(event.models.Request, scripts[0], content['user_id'])
+                elif obj.args()[0] == MESSAGE_TYPE['META_EVENT']:
+                    self._register(event.models.Meta_event, scripts[0], content['user_id'])
                 else:
-                    if obj.args()[0] == MESSAGE_TYPE['MESSAGE']:
-                        self._register(event.models.Message,scripts[0],content['user_id'])
-                    elif obj.args()[0] == MESSAGE_TYPE['NOTICE']:
-                        self._register(event.models.Notice, scripts[0], content['user_id'])
-                    elif obj.args()[0] == MESSAGE_TYPE['REQUEST']:
-                        self._register(event.models.Request, scripts[0], content['user_id'])
-                    elif obj.args()[0] == MESSAGE_TYPE['META_EVENT']:
-                        self._register(event.models.Meta_event, scripts[0], content['user_id'])
-                    else:
-                        return response.jsonResponse({'reply':'注册类型错误'})
-                    return response.jsonResponse({'reply':'注册成功'})
+                    return response.jsonResponse({'reply':'注册类型错误'})
+                return response.jsonResponse({'reply':'注册成功'})
 
     def _register(self,myModel,script,userId):
         objects = myModel.objects.filter(script=script)
@@ -460,17 +428,16 @@ class UnRegister(BaseEventMiddleware,BaseFilter):
                 scripts = script.models.PythonScript.objects.filter(name=obj.args()[1])
                 if len(scripts) == 0:
                     return response.jsonResponse({'reply':'文件不存在'})
+                if obj.args()[0] == MESSAGE_TYPE['MESSAGE']:
+                    return self._response(self._unRegister(event.models.Message,scripts[0]))
+                elif obj.args()[0] == MESSAGE_TYPE['NOTICE']:
+                    return self._response(self._unRegister(event.models.Notice, scripts[0]))
+                elif obj.args()[0] == MESSAGE_TYPE['REQUEST']:
+                    return self._response(self._unRegister(event.models.Request, scripts[0]))
+                elif obj.args()[0] == MESSAGE_TYPE['META_EVENT']:
+                    return self._response(self._unRegister(event.models.Meta_event, scripts[0]))
                 else:
-                    if obj.args()[0] == MESSAGE_TYPE['MESSAGE']:
-                        return self._response(self._unRegister(event.models.Message,scripts[0]))
-                    elif obj.args()[0] == MESSAGE_TYPE['NOTICE']:
-                        return self._response(self._unRegister(event.models.Notice, scripts[0]))
-                    elif obj.args()[0] == MESSAGE_TYPE['REQUEST']:
-                        return self._response(self._unRegister(event.models.Request, scripts[0]))
-                    elif obj.args()[0] == MESSAGE_TYPE['META_EVENT']:
-                        return self._response(self._unRegister(event.models.Meta_event, scripts[0]))
-                    else:
-                        return response.jsonResponse({'reply':'注册类型错误'})
+                    return response.jsonResponse({'reply':'注册类型错误'})
 
     def _response(self,result):
         if result:
@@ -509,8 +476,7 @@ class RunThirdPartyMiddleware(BaseEventMiddleware, BaseFilter):
                     obj = obj.Main(response)
                     self.myModels.append((myModel,obj))
                     try:
-                        result = self._run_process_request(content,obj)
-                        if result:
+                        if result := self._run_process_request(content, obj):
                             return result
                     except Exception as e:
                         self._error(content,myModel,traceback.format_exc())
@@ -518,8 +484,7 @@ class RunThirdPartyMiddleware(BaseEventMiddleware, BaseFilter):
     def process_response(self,content,response):
         for i in self.myModels[::-1]:
             try:
-                result = self._run_process_response(content,response,i[1])
-                if result:
+                if result := self._run_process_response(content, response, i[1]):
                     return result
             except Exception as e:
                 self._error(content, i[0],traceback.format_exc())
@@ -551,7 +516,7 @@ class Version(BaseEventMiddleware):
     def process_request(self,content):
         obj = Parsetext(content['message'])
         if obj.command() == self.__str__() and content['message_type'] == 'group':
-            return response.jsonResponse({'reply':"Version:%s %s"%(VERSION[0],VERSION[1])})
+            return response.jsonResponse({'reply': f"Version:{VERSION[0]} {VERSION[1]}"})
 
     def __str__(self):
         return 'version'

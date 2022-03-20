@@ -9,20 +9,18 @@ class Middleware:
         objects = self.initClass(response)
         try:
             for obj in objects:
-                result = obj.process_request(self.getRequest())
-                if result:
+                if result := obj.process_request(self.getRequest()):
                     return result
             view_response = response(self.getRequest())
             for obj in objects[::-1]:
-                result = obj.process_response(self.getRequest(),view_response)
-                if result:
+                if result := obj.process_response(
+                    self.getRequest(), view_response
+                ):
                     return result
-            else:
-                return view_response
+            return view_response
         except BaseException as e:
             for obj in objects:
-                result = obj.process_exception(traceback.format_exc())
-                if result:
+                if result := obj.process_exception(traceback.format_exc()):
                     return result
 
     def getRequest(self):

@@ -38,23 +38,16 @@ def translate(text):
     return text
 
 def dirExists(path):
-    if os.path.exists(path) and os.path.isdir(path) :
-        return True
-    else:
-        return False
+    return bool(os.path.exists(path) and os.path.isdir(path))
 
 def dirCreate(path):
-    if not dirExists(path):
-        os.mkdir(path)
-        return True
-    else:
+    if dirExists(path):
         return False
+    os.mkdir(path)
+    return True
 
 def fileExists(path):
-    if os.path.exists(path) and os.path.isfile(path):
-        return True
-    else:
-        return False
+    return bool(os.path.exists(path) and os.path.isfile(path))
 
 def importScript(file):
     # import numpy
@@ -66,9 +59,8 @@ def importScript(file):
 def fileCreate(path):
     if fileExists(path):
         return False
-    else:
-        os.mknod(path)
-        return True
+    os.mknod(path)
+    return True
 
 def filterFileExtension(files,extendName):
     L = []
@@ -89,10 +81,7 @@ def clearScript(module_name):
 
 def extractPic(text):
     results = re.findall(r'\[CQ:image,file=(.*?),url=(.*?)\]',text)
-    dic = {}
-    for result in results:
-        dic[result[0]] = result[1]
-    return dic
+    return {result[0]: result[1] for result in results}
 
 def fromUrlDownPic(name,url):
     path = os.path.join(IMAGES_DIR,name)
@@ -123,26 +112,20 @@ def saveFile(path,data,method='wb'):
 
 def readPythonScriptFile(fileName):
     obj = readFile(os.path.join(PYTHON_SCRIPT_DIR,fileName),'r')
-    data = ''
-    for i in obj:
-        data += i
-    return data
+    return ''.join(obj)
 
 def readFile(path,method='rb'):
     with open(path,method)as f:
         while True:
-            data = f.read(BUFFSIZE)
-            if not data:
-                break
-            else:
+            if data := f.read(BUFFSIZE):
                 yield data
+            else:
+                break
 
 def jsonLoad(path,encoding='utf-8'):
     if fileExists(path):
         obj = readFile(path,'r')
-        data = ''
-        for i in obj:
-            data += i
+        data = ''.join(obj)
         try:
             return json.loads(data,encoding=encoding)
         except Exception:
@@ -157,11 +140,10 @@ def jsonDumps(obj):
 def scriptSpendTime(func,args=()):
     if type(args) != tuple:
         raise '必须是元组'
-    else:
-        start = time.clock()
-        func(*args)
-        end = time.clock()
-        return end - start
+    start = time.clock()
+    func(*args)
+    end = time.clock()
+    return end - start
 
 def getFonts():
     fonts = getFiles(FONTS_DIR)

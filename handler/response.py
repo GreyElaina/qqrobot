@@ -25,15 +25,15 @@ def request(url,params):
 
 def groupResponse(content,text):
     params = messageType(content,text,'group')
-    return asyncResponse(url=SERVER + '/send_msg', params=params)
+    return asyncResponse(url=f'{SERVER}/send_msg', params=params)
 
 def privateResponse(content,text):
     params = messageType(content,text,'private')
-    return asyncResponse(url=SERVER + '/send_msg', params=params)
+    return asyncResponse(url=f'{SERVER}/send_msg', params=params)
 
 def discussResponse(content,text):
     params = messageType(content,text,'discuss')
-    return asyncResponse(url=SERVER + '/send_msg', params=params)
+    return asyncResponse(url=f'{SERVER}/send_msg', params=params)
 
 def messageType(content,text,mType):
     if mType == 'group':
@@ -65,10 +65,7 @@ def command(pattern,fnc,field):
             return self._patternText
 
         def matchPattern(self,request):
-            if self.getPattern().search(request[self.getField()]):
-                return True
-            else:
-                return False
+            return bool(self.getPattern().search(request[self.getField()]))
 
         def run(self,request):
             return self.getFunction()(request)

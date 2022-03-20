@@ -10,10 +10,7 @@ class Parse:
     def __init__(self,server):
         L=server.split(':')
         self.host=L[0]
-        if len(L) ==2:
-            self.port =int(L[1])
-        else:
-            self.port = 25565
+        self.port = int(L[1]) if len(L) ==2 else 25565
 
 @myMain
 def main(g,q,m):

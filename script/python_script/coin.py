@@ -8,7 +8,7 @@ def main(g,q,m):
         num = 10
     elif m.isdigit():
         num = int(m)
-        if 1 > num or num > 999:
+        if num < 1 or num > 999:
             return '范围在1-999之间'
     else:
         return '输入错误次数必须为整数数字'
@@ -22,7 +22,7 @@ def coin(num):
     stand = int(random.random() * 100)
     total = {'front': 0, 'back': 0, 'stand': 0}
 
-    for i in range(num):
+    for _ in range(num):
         result = int(random.random() * 100)
         if stand == result:
             total['stand'] += 1

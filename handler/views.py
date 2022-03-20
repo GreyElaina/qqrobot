@@ -19,8 +19,7 @@ def exec(request,messageType):
     for e in eventPatterns:
         if e.matchPattern(request.POST):
             return mid.execute(e.getFunction())
-    else:
-        return mid.execute(returnNone)
+    return mid.execute(returnNone)
 
 def main(request):
     # 匹配事件

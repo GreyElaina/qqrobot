@@ -38,21 +38,19 @@ def msg(text):
     gMsg(text)
 
 def qq(text,num=None):
-    if num == None:
-        gMsg('[CQ:at,qq=%s] %s'%(Q,text))
+    if num is None:
+        gMsg(f'[CQ:at,qq={Q}] {text}')
     else:
-        gMsg('[CQ:at,qq=%s] %s'%(num,text))
+        gMsg(f'[CQ:at,qq={num}] {text}')
 
 def atQQ(*args,**kwargs):
     qq(*args,**kwargs)
 
 def sendPic(fileName,text='',method='group'):
-    if method =='group':
-        gMsg('[CQ:image,file=%s] %s'%(fileName,text))
-    elif method == 'private':
-        pMsg('[CQ:image,file=%s] %s'%(fileName,text))
+    if method == 'group' or method != 'private':
+        gMsg(f'[CQ:image,file={fileName}] {text}')
     else:
-        gMsg('[CQ:image,file=%s] %s'%(fileName,text))
+        pMsg(f'[CQ:image,file={fileName}] {text}')
 
 @myMain
 def main(g,q,m):
